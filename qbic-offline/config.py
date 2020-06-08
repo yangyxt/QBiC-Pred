@@ -25,11 +25,30 @@ def dictfamily2genedict(dictlist):
         result.update(new_d)
     return result
 
+def parse_omp_envvar(env_value):
+    return int(env_value.strip().split(",")[0])
+
+
+def estimate_cpus():
+    limit = float("inf")
+    if "OMP_THREAD_LIMIT" in os.environ:
+        limit = parse_omp_envvar(os.environ["OMP_THREAD_LIMIT"])
+
+    if "OMP_NUM_THREADS" in os.environ:
+        cpus = parse_omp_envvar(os.environ["OMP_NUM_THREADS"])
+    else:
+        try:
+            cpus = len(os.sched_getaffinity(os.getpid()))
+        except AttributeError or OSError:
+            cpus = os.cpu_count()
+           
+    return min(cpus, limit)
+
 config = configparser.ConfigParser()
 config.read('config.ini')
 
 if config["General Conf"]["PCOUNT"] == "cpu.count":
-    PCOUNT = os.cpu_count()
+    PCOUNT = estimate_cpus()
 else:
     PCOUNT = int(config["General Conf"]["PCOUNT"])
 
